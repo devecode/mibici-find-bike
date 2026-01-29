@@ -9,31 +9,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Use Node
+      - name: Use Node 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+          cache: "npm"
 
-      - name: Install deps
+      - name: Install dependencies
         run: npm ci
 
-      - name: Start DB
-        run: docker compose up -d db
+      - name: Start database
+        run: docker compose up -d --wait db
 
-      - name: Wait DB
-        run: npm run ci:waitdb
-        env:
-          DB_HOST: 127.0.0.1
-          DB_PORT: 5432
-
-      - name: Migrate + Seed
+      - name: Prepare DB (migrate + seed)
         run: npm run ci:prep
         env:
           DB_HOST: 127.0.0.1
-          DB_PORT: 5432
+          DB_PORT: 5433
           DB_USER: postgres
           DB_PASSWORD: postgres
           DB_NAME: mibici
@@ -43,7 +38,7 @@ jobs:
         run: npm run ci:test
         env:
           DB_HOST: 127.0.0.1
-          DB_PORT: 5432
+          DB_PORT: 5433
           DB_USER: postgres
           DB_PASSWORD: postgres
           DB_NAME: mibici
