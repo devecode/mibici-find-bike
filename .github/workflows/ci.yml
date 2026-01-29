@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Start DB
+        run: docker compose up -d db
+
+      - name: Wait DB
+        run: npm run ci:waitdb
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+
+      - name: Migrate + Seed
+        run: npm run ci:prep
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: mibici
+          SEED_CSV_PATH: nomenclatura_2025_12.csv
+
+      - name: Run tests
+        run: npm run ci:test
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: mibici
