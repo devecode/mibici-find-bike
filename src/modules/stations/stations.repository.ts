@@ -1,38 +1,33 @@
 import { pool } from "../../db/pool.js";
+import { SQL_NEARBY } from "./stations.sql.js";
 import { SQL_CREATE_STATION, SQL_CREATE_INVENTORY, SQL_DELETE_STATION } from "./stations.crud.sql.js";
+import type { NearbyParams, CreateStationInput } from "./stations.service.js";
 
-export type CreateStationInput = {
-  id: number;
-  name: string;
-  status?: string;
-  location?: string | null;
-  obcn?: string | null;
-  lat: number;
-  lon: number;
-  available_bikes?: number;
-  available_docks?: number;
-};
+export async function findNearbyStations(p: NearbyParams) {
+  const res = await pool.query(SQL_NEARBY, [p.lon, p.lat, p.radius, p.onlyAvailable, p.limit]);
+  return res.rows;
+}
 
-export async function createStation(input: CreateStationInput) {
+export async function createStationTx(input: CreateStationInput & { status: string; available_bikes: number; available_docks: number }) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    const status = input.status ?? "IN_SERVICE";
-    const bikes = input.available_bikes ?? 10;
-    const docks = input.available_docks ?? 10;
-
     const s = await client.query(SQL_CREATE_STATION, [
       input.id,
       input.name,
-      status,
+      input.status,
       input.location ?? null,
       input.obcn ?? null,
       input.lon,
       input.lat
     ]);
 
-    const inv = await client.query(SQL_CREATE_INVENTORY, [input.id, bikes, docks]);
+    const inv = await client.query(SQL_CREATE_INVENTORY, [
+      input.id,
+      input.available_bikes,
+      input.available_docks
+    ]);
 
     await client.query("COMMIT");
 

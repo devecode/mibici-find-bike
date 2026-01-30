@@ -11,7 +11,7 @@ describe("Race condition: reserve endpoint", () => {
 
   beforeAll(async () => {
     app = await buildApp();
-    await app.listen({ port: 0, host: "127.0.0.1" }); // random free port
+    await app.listen({ port: 0, host: "127.0.0.1" });
     const addr = app.server.address();
     const port = typeof addr === "object" && addr ? addr.port : 0;
     baseUrl = `http://127.0.0.1:${port}`;

@@ -10,7 +10,6 @@ export async function buildApp() {
     logger: { transport: { target: "pino-pretty" } }
   });
 
-  // Swagger primero
   await app.register(swagger, {
     openapi: {
       info: {
@@ -23,10 +22,8 @@ export async function buildApp() {
 
   await app.register(swaggerUI, {
     routePrefix: "/docs"
-    // por default expone /docs/json
   });
 
-  // Routes después
   app.get("/health", async () => ({ ok: true }));
 
   app.get("/db-health", async () => {

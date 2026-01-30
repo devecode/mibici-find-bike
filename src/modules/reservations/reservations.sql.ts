@@ -5,7 +5,7 @@ export const SQL_DECREMENT_BIKE = `
       updated_at = now()
   WHERE station_id = $1
     AND available_bikes > 0
-  RETURNING station_id, available_bikes, available_docks;
+  RETURNING station_id::int as station_id, available_bikes, available_docks;
 `;
 
 export const SQL_INCREMENT_BIKE = `
@@ -14,13 +14,13 @@ export const SQL_INCREMENT_BIKE = `
       available_docks = GREATEST(available_docks - 1, 0),
       updated_at = now()
   WHERE station_id = $1
-  RETURNING station_id, available_bikes, available_docks;
+  RETURNING station_id::int as station_id, available_bikes, available_docks;
 `;
 
 export const SQL_INSERT_RESERVATION = `
   INSERT INTO reservations (id, station_id, user_id, status)
   VALUES ($1, $2, $3, 'ACTIVE')
-  RETURNING id, station_id, user_id, status, created_at;
+  RETURNING id, station_id::int as station_id, user_id, status, created_at;
 `;
 
 export const SQL_COMPLETE_RESERVATION = `
@@ -31,5 +31,5 @@ export const SQL_COMPLETE_RESERVATION = `
     AND station_id = $2
     AND user_id = $3
     AND status = 'ACTIVE'
-  RETURNING id, station_id, user_id, status, created_at, completed_at;
+  RETURNING id, station_id::int as station_id, user_id, status, created_at, completed_at;
 `;
