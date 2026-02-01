@@ -1,33 +1,32 @@
 import { FastifyReply, FastifyRequest } from "fastify";
-import { reserveBike, returnBike } from "./reservations.service.js";
+import * as service from "./reservations.service.js";
+import { isAppError } from "../../common/errors.js";
 
 export async function reserveBikeHandler(req: FastifyRequest, reply: FastifyReply) {
-  const stationId = Number((req.params as any).id);
-  const body = req.body as { userId?: string };
+  try {
+    const result = await service.reserveBike({
+      stationId: (req.params as any).id,
+      userId: (req.body as any)?.userId
+    });
 
-  if (!Number.isFinite(stationId)) return reply.status(400).send({ error: "Invalid station id" });
-  if (!body?.userId) return reply.status(400).send({ error: "userId is required" });
-
-  const result = await reserveBike({ stationId, userId: body.userId });
-
-  if (!result.ok) return reply.status(409).send({ error: result.reason });
-  return reply.status(200).send(result);
+    return reply.status(200).send(result);
+  } catch (e) {
+    if (isAppError(e)) return reply.status(e.status).send({ error: e.code });
+    throw e;
+  }
 }
 
 export async function returnBikeHandler(req: FastifyRequest, reply: FastifyReply) {
-  const stationId = Number((req.params as any).id);
-  const body = req.body as { userId?: string; reservationId?: string };
+  try {
+    const result = await service.returnBike({
+      stationId: (req.params as any).id,
+      userId: (req.body as any)?.userId,
+      reservationId: (req.body as any)?.reservationId
+    });
 
-  if (!Number.isFinite(stationId)) return reply.status(400).send({ error: "Invalid station id" });
-  if (!body?.userId) return reply.status(400).send({ error: "userId is required" });
-  if (!body?.reservationId) return reply.status(400).send({ error: "reservationId is required" });
-
-  const result = await returnBike({
-    stationId,
-    userId: body.userId,
-    reservationId: body.reservationId
-  });
-
-  if (!result.ok) return reply.status(409).send({ error: result.reason });
-  return reply.status(200).send(result);
+    return reply.status(200).send(result);
+  } catch (e) {
+    if (isAppError(e)) return reply.status(e.status).send({ error: e.code });
+    throw e;
+  }
 }
