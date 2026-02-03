@@ -30,7 +30,7 @@ ST_DWithin(geom, point, radius)
 Combined with:
 
 ```sql
-CREATE INDEX idx_stations_geom ON stations USING GIST (geom);
+CREATE INDEX stations_geom_gix ON stations USING GIST (geom);
 ```
 
 This guarantees:
@@ -194,5 +194,96 @@ Swagger UI:
 ```
 http://localhost:3000/docs
 ```
+
+---
+
+## 🤖 AI Usage Report
+
+AI (ChatGPT) was used as a development assistant, mainly to speed up repetitive setup tasks and to review architectural decisions. The tool helped reduce boilerplate time but all critical system decisions (database design, concurrency model, and test strategy) were validated manually.
+
+At the beginning of the project, AI was used to help scaffold the environment, initialize the project structure, and configure basic tooling. These are simple tasks, but delegating them to AI reduced setup time and allowed more focus on system design.
+
+---
+
+### ❓ What AI suggestion did you reject and why?
+
+Two important AI suggestions were rejected:
+
+**1) Exposing credentials in the `.env` during initial setup**
+AI initially generated examples that included hardcoded or exposed credentials. This was rejected because:
+
+* It violates security best practices
+* Credentials must never be committed or exposed
+* The project instead uses environment variables safely injected via CI and local `.env` ignored by Git
+
+**2) Using application-level locks (mutex in Node.js) for reservations**
+AI suggested preventing concurrent reservations using a mutex or in-memory lock.
+
+This was rejected because:
+
+* It does **not scale horizontally**
+* It fails when multiple API instances run behind a load balancer
+* It breaks in distributed systems
+
+Instead, the final solution uses **database-level concurrency control** with atomic SQL updates inside transactions:
+
+```sql
+UPDATE station_inventory
+SET available_bikes = available_bikes - 1
+WHERE station_id = $1 AND available_bikes > 0
+RETURNING ...
+```
+
+This guarantees correctness even under high concurrency and multiple service instances.
+
+---
+
+### ⚠️ How did you detect and correct an AI hallucination or security issue?
+
+While implementing the concurrency tests, AI began suggesting code changes unrelated to the current project structure and even hinted at exposing database passwords. This indicated the responses were drifting away from the actual code context.
+
+A concrete technical issue occurred when AI suggested a simple update for test setup:
+
+```sql
+UPDATE station_inventory SET ...
+```
+
+This would silently fail if the row did not exist, because PostgreSQL would return `rowCount = 0`. That would make concurrency tests unreliable in CI.
+
+The issue was detected by understanding PostgreSQL behavior and noticing that the race test depended on existing rows.
+
+It was corrected by implementing an **UPSERT + ensureStation strategy**:
+
+* Insert station if missing
+* Insert inventory if missing
+* Otherwise update
+
+This made tests deterministic, idempotent, and CI-safe.
+
+---
+
+### 💡 What was the most interesting prompt?
+
+The most impactful prompt used was:
+
+> **"Design a concurrency-safe reservation system in PostgreSQL that prevents overselling inventory under 50+ simultaneous requests without using application locks."**
+
+This helped validate:
+
+* Transaction design
+* Atomic updates
+* Use of `RETURNING`
+* PostgreSQL row-level locking behavior
+
+It directly influenced the final reservation architecture.
+
+---
+
+### 🧠 Summary
+
+AI was used as a productivity and review tool, not as an autonomous developer. All critical decisions related to scalability, concurrency, and security were verified against database behavior and distributed system principles.
+
+---
+
 
 
